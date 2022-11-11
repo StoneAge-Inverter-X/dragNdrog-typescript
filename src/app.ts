@@ -1,14 +1,46 @@
+//Project Type: has id, title, descripition, people, status
+enum ProjectStatus {
+  Active,
+  Finished,
+}
+// why not using interface for this Project object? 'cause we want to instanciate it.
+//by doing below lines, we imexplicityly declare a few class property
+class Project {
+  constructor(
+    public id: string,
+    public title: string,
+    public description: string,
+    public people: number,
+    public status: ProjectStatus
+  ) {}
+}
+
 //the ProjedctInput class get the user input form to templateElement, then render it to hostElement.
 
 //ProjectState class definition: it is like state in the React , which stors data and update the dom once it changes.
-class ProjectState {
+
+// to make this line generic : type Listner = (items: Project[]) => void;
+type Listner<T> = (items: T[]) => void;
+
+// class State: this is the base class of ProjectState, and is more generic for all the "state" implementation
+class State<T> {
+  protected listeners: Listner<T>[] = [];
+  addListener(listenerFn: Listner<T>) {
+    this.listeners.push(listenerFn);
+  }
+}
+
+//when you extend State class, you need to specify what T is
+class ProjectState extends State<Project> {
   private projects: any[] = [];
   private static instance: ProjectState;
   //listeners stores all the functions that need to be called when this.projects is updated
-  private listeners: any[] = [];
 
-  //in this private constuctor way, we can only create a new object by calling getInstance()
-  private constructor() {}
+  //by using this private constructor() and static getInstance(), we can only create a new object by calling getInstance().
+  //this approach is called singleton:The Singleton pattern ensures that a class has only one instance and provides a global point of access to that instance.
+  private constructor() {
+    super();
+  }
 
   static getInstance() {
     if (this.instance) {
@@ -20,20 +52,18 @@ class ProjectState {
   }
 
   addProject(title: string, description: string, numberOfPeople: number) {
-    const newProject = {
-      id: Math.random().toString(),
-      title: title,
-      description: description,
-      people: numberOfPeople,
-    };
+    const newProject = new Project(
+      Math.random().toString(),
+      title,
+      description,
+      numberOfPeople,
+      ProjectStatus.Active
+    );
+
     this.projects.push(newProject);
     for (const listenerFn of this.listeners) {
       listenerFn(this.projects.slice()); // pass the copy of array, not the original arry to protect it.
     }
-  }
-
-  addListener(listenerFn: Function) {
-    this.listeners.push(listenerFn);
   }
 }
 
@@ -102,52 +132,86 @@ function AutoBindThis(_: any, _2: any, descriptor: PropertyDescriptor) {
   return adjustedDescriptor;
 }
 
-// ProjectList Class
-class ProjecteList {
+//Component class definition: it's the base class of ProjectList and ProjectInput. We can think is as the concept of component in React JS. it has some elements, and it can render them.
+//'cause ProjectList and ProjectInput has different type regarding "hostElement" and "element", so we use generic class (T and U)
+// Component is abstract class, since we don't want it to be instantiated, but has to be inherited firstly
+abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   templateElement: HTMLTemplateElement;
-  hostElement: HTMLDivElement;
-  element: Element;
-  assignedProjects: any[] = [];
-
-  //priveate type: this inexplicitly add an private property to this class.
-  //'active'|'finishjed' is a literal type and a union type
-  constructor(private type: "active" | "finished") {
+  hostElement: T;
+  element: U;
+  constructor(
+    templatedId: string,
+    hostElementId: string,
+    insertAtStart: boolean,
+    newElementID?: string
+  ) {
     this.templateElement = document.getElementById(
-      "project-list"
-    )! as HTMLTemplateElement;
-    this.hostElement = document.getElementById("app")! as HTMLDivElement;
+      templatedId
+    ) as HTMLTemplateElement;
+    this.hostElement = document.getElementById(hostElementId) as T;
 
     const importedNode = document.importNode(
       this.templateElement.content,
       true
     );
-    this.element = importedNode.firstElementChild as Element;
-    this.element.id = `${this.type}-projects`;
+    this.element = importedNode.firstElementChild as U;
+    if (newElementID) {
+      this.element.id = newElementID;
+    }
 
+    this.attach(insertAtStart);
+  }
+
+  private attach(insertAtBeginning: boolean) {
+    this.hostElement.insertAdjacentElement(
+      insertAtBeginning ? "afterbegin" : "beforeend",
+      this.element
+    );
+  }
+
+  //abstract method: the implement is not in base class, but it forces the inherenting class to implement it
+  abstract configure(): void;
+  abstract renderContent(): void;
+}
+
+// ProjectList Class
+class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+  assignedProjects: Project[] = [];
+
+  //priveate type: this inexplicitly add an private property to this class.
+  //'active'|'finishjed' is a literal type and a union type
+  constructor(private type: "active" | "finished") {
+    super("project-list", "app", false, `${type}-projects`);
     //register to the global projectState with this function, which will get the projects from the global to the local and then render the dom accordingly
-    projectState.addListener((projects: any[]) => {
-      this.assignedProjects = projects;
-      this.renderProjects();
-    });
-
-    this.attach();
+    this.configure();
     this.renderContent();
   }
 
-  private attach() {
-    this.hostElement.insertAdjacentElement("beforeend", this.element);
-  }
-  private renderContent() {
+  renderContent() {
     const listId = `${this.type}-projects-list`;
     this.element.querySelector("ul")!.id = listId;
     this.element.querySelector("h2")!.textContent =
       this.type.toUpperCase() + " PROJECTS";
   }
+
+  configure(): void {
+    projectState.addListener((projects: Project[]) => {
+      const relavantProjects = projects.filter((prj) => {
+        if (this.type === "active") {
+          return prj.status === ProjectStatus.Active;
+        }
+        return prj.status === ProjectStatus.Finished;
+      });
+      this.assignedProjects = relavantProjects;
+      this.renderProjects();
+    });
+  }
+
   private renderProjects() {
     const listEl = document.getElementById(
       `${this.type}-projects-list`
     )! as HTMLUListElement;
-
+    listEl.innerHTML = "";
     for (const prjItem of this.assignedProjects) {
       const listItem = document.createElement("li");
       listItem.textContent = prjItem.title;
@@ -158,34 +222,28 @@ class ProjecteList {
 }
 
 // ProjedctInput class definition
-class ProjedctInput {
-  templateElement: HTMLTemplateElement;
-  hostElement: HTMLDivElement;
-  element: Element;
+class ProjedctInput extends Component<HTMLDivElement, HTMLFormElement> {
   titleInputElement: HTMLInputElement;
   descriptionInputElement: HTMLInputElement;
   peopleInputElement: HTMLInputElement;
 
   constructor() {
-    this.templateElement = document.getElementById(
-      "project-input"
-    )! as HTMLTemplateElement;
-    this.hostElement = document.getElementById("app")! as HTMLDivElement;
-
-    const importedNode = document.importNode(
-      this.templateElement.content,
-      true
-    );
-    this.element = importedNode.firstElementChild as Element;
-    this.element.id = "user-input";
+    super("project-input", "app", true, "user-input");
     this.titleInputElement = this.element.querySelector("#title")!;
     this.descriptionInputElement = this.element.querySelector("#description")!;
     this.peopleInputElement = this.element.querySelector("#people")!;
+
     //this is to add event listener
     this.configure();
     //constructor has this attach(),which is handy but not a good practise
-    this.attach();
   }
+
+  configure() {
+    this.element.addEventListener("submit", this.submitHandler); // when using @AutoBindThis, "this" is pointed at the ProjedctInput instance. not the HTML element that is calling submitHandler()
+    //this.element.addEventListener("submit", this.submitHandler.bind(this));// call bind() when not using @AutoBindThis
+  }
+
+  renderContent() {}
 
   @AutoBindThis
   private submitHandler(event: Event) {
@@ -198,14 +256,6 @@ class ProjedctInput {
     }
     this.clearInputs();
     // console.log(this);
-  }
-
-  private configure() {
-    this.element.addEventListener("submit", this.submitHandler); // when using @AutoBindThis, "this" is pointed at the ProjedctInput instance. not the HTML element that is calling submitHandler()
-    //this.element.addEventListener("submit", this.submitHandler.bind(this));// call bind() when not using @AutoBindThis
-  }
-  private attach() {
-    this.hostElement.insertAdjacentElement("afterbegin", this.element);
   }
 
   private getUserInput(): [string, string, number] | void {
@@ -254,5 +304,5 @@ const prjInput = new ProjedctInput();
 // console.log(prjInput.hostElement);
 // console.log(prjInput.titleInputElement);
 // console.log(prjInput.titleInputElement.value);
-const activePrjList = new ProjecteList("active");
-const finishedPrjList = new ProjecteList("finished");
+const activePrjList = new ProjectList("active");
+const finishedPrjList = new ProjectList("finished");
