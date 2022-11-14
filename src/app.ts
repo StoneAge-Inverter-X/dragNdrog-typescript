@@ -1,3 +1,14 @@
+// Drag and drop interfaces
+interface Draggable {
+  dragStartHandler(event: DragEvent): void;
+  dragEndHandler(event: DragEvent): void;
+}
+interface DragTarget {
+  dragOverHandler(event: DragEvent): void;
+  dropHandler(event: DragEvent): void;
+  dragLeaveHandler(event: DragEvent): void;
+}
+
 //Project Type: has id, title, descripition, people, status
 enum ProjectStatus {
   Active,
@@ -174,8 +185,54 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
   abstract renderContent(): void;
 }
 
+//ProjectItem Class: it extends Component class and implements Draggable interface
+class ProjectItem
+  extends Component<HTMLUListElement, HTMLLIElement>
+  implements Draggable
+{
+  private project: Project;
+  // a getter method, which conventionally follows the declaration of property, and is defined just as other method. It can be used as if it's a peropery, check renderContent() for more
+  get persons() {
+    if (this.project.people === 1) {
+      return "1 person";
+    } else {
+      return `${this.project.people} persons`;
+    }
+  }
+  constructor(hostID: string, project: Project) {
+    super("single-project", hostID, false, project.id);
+    //register to the global projectState with this function, which will get the projects from the global to the local and then render the dom accordingly
+    this.project = project;
+    this.configure();
+    // this.renderContent();
+  }
+  configure(): void {
+    this.element.addEventListener("dragstart", this.dragStartHandler);
+    this.element.addEventListener("dragend", this.dragEndHandler);
+  }
+
+  renderContent(): void {
+    this.element.querySelector("h2")!.textContent = this.project.title;
+    this.element.querySelector("h3")!.textContent = this.persons + " assigned";
+    this.element.querySelector("p")!.textContent = this.project.description;
+  }
+
+  @AutoBindThis
+  dragStartHandler(event: DragEvent) {
+    console.log(event);
+  }
+
+  @AutoBindThis
+  dragEndHandler(_: DragEvent) {
+    console.log("DragEnd");
+  }
+}
+
 // ProjectList Class
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+class ProjectList
+  extends Component<HTMLDivElement, HTMLElement>
+  implements DragTarget
+{
   assignedProjects: Project[] = [];
 
   //priveate type: this inexplicitly add an private property to this class.
@@ -213,10 +270,11 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     )! as HTMLUListElement;
     listEl.innerHTML = "";
     for (const prjItem of this.assignedProjects) {
-      const listItem = document.createElement("li");
-      listItem.textContent = prjItem.title;
-
-      listEl.appendChild(listItem);
+      const projectItem = new ProjectItem(
+        `${this.type}-projects-list`,
+        prjItem
+      );
+      projectItem.renderContent();
     }
   }
 }
