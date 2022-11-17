@@ -1,4 +1,4 @@
-import { Project ,ProjectStatus} from "../models/project-model.js";
+import { Project, ProjectStatus } from "../models/project-model";
 
 //ProjectState class definition: it is like state in the React , which stors data and update the dom once it changes.
 

@@ -1,5 +1,5 @@
-import { ProjedctInput } from "./components/project-input.js";
-import { ProjectList } from "./components/project-list.js";
+import { ProjedctInput } from "./components/project-input";
+import { ProjectList } from "./components/project-list";
 
 //instantialise a ProjedctInput object
 new ProjedctInput();

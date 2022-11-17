@@ -1,7 +1,7 @@
-import { projectState } from "./../state/project-state.js";
-import { Component } from "./base-component.js";
-import { Validatable, validate } from "../util/validation.js";
-import { AutoBindThis } from "../decorator/autobind.js";
+import { projectState } from "./../state/project-state";
+import { Component } from "./base-component";
+import { Validatable, validate } from "../util/validation";
+import { AutoBindThis } from "../decorator/autobind";
 // ProjedctInput class definition
 //the ProjedctInput class get the user input form to templateElement, then render it to hostElement.
 export class ProjedctInput extends Component<HTMLDivElement, HTMLFormElement> {
