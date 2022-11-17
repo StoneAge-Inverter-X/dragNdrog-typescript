@@ -1,4 +1,3 @@
-namespace App {
   //it's a reuseable validation implement:
   export interface Validatable {
     value: string | number;
@@ -47,4 +46,3 @@ namespace App {
     }
     return isValid;
   }
-}

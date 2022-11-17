@@ -1,4 +1,4 @@
-namespace App {
+
   //Component class definition: it's the base class of ProjectList and ProjectInput. We can think is as the concept of component in React JS. it has some elements, and it can render them.
   //'cause ProjectList and ProjectInput has different type regarding "hostElement" and "element", so we use generic class (T and U)
   // Component is abstract class, since we don't want it to be instantiated, but has to be inherited firstly
@@ -43,4 +43,4 @@ namespace App {
     abstract configure(): void;
     abstract renderContent(): void;
   }
-}
+
