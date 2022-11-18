@@ -5,7 +5,7 @@ import { DragTarget } from "../models/drag-drop-interfaces";
 import { projectState } from "./../state/project-state";
 import { ProjectItem } from "./project-item";
 
-// ProjectList Class
+// ProjectList Class: defines the list of active and finined list in final
 export class ProjectList
   extends Component<HTMLDivElement, HTMLElement>
   implements DragTarget
